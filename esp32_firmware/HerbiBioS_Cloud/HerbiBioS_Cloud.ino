@@ -120,13 +120,17 @@ bool initCamera() {
   config.pin_sccb_scl = SIOC_GPIO_NUM;
   config.pin_pwdn = PWDN_GPIO_NUM;
   config.pin_reset = RESET_GPIO_NUM;
-  config.xclk_freq_hz = 20000000;
+  config.xclk_freq_hz = 16000000; // 16MHz устраняет переполнение DMA буфера (FB-OVF)
   config.pixel_format = PIXFORMAT_JPEG;
+
+#if defined(CAMERA_GRAB_LATEST)
+  config.grab_mode = CAMERA_GRAB_LATEST; // всегда брать только свежий кадр без забивания очереди
+#endif
 
   if (psramFound()) {
     config.frame_size = FRAMESIZE_VGA; // 640x480 — оптимально для YOLOv8
     config.jpeg_quality = 12;          // 10-12 хорошее качество при небольшом весе
-    config.fb_count = 2;
+    config.fb_count = 1;               // 1 буфер исключает накопление старых кадров и FB-OVF
   } else {
     config.frame_size = FRAMESIZE_QVGA; // 320x240
     config.jpeg_quality = 15;
@@ -142,24 +146,37 @@ bool initCamera() {
   return true;
 }
 
+unsigned long lastWiFiReconnectAttempt = 0;
+
 void connectWiFi() {
+  if (WiFi.status() == WL_CONNECTED) {
+    return;
+  }
+
   Serial.printf("\n[WiFi] Подключение к %s ", WIFI_SSID);
+  
+  // Сбрасываем предыдущую зависшую попытку, чтобы не было ошибки "wifi:sta is connecting, cannot set config"
+  WiFi.disconnect(true);
+  delay(300);
+
   WiFi.mode(WIFI_STA);
+  WiFi.setAutoReconnect(true);
+  WiFi.setSleep(false); // Отключаем засыпание Wi-Fi модема для стабильной связи
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
   int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts < 30) {
+  while (WiFi.status() != WL_CONNECTED && attempts < 25) {
     delay(500);
     Serial.print(".");
     attempts++;
   }
 
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("\n[WiFi] Подключено!");
+    Serial.println("\n[WiFi] Подключено успешно!");
     Serial.print("[WiFi] IP адрес: ");
     Serial.println(WiFi.localIP());
   } else {
-    Serial.println("\n[WiFi] Не удалось подключиться к Wi-Fi. Проверьте SSID и пароль.");
+    Serial.println("\n[WiFi] Не удалось подключиться к Wi-Fi. Проверьте правильность SSID/пароля.");
   }
 }
 
@@ -208,7 +225,10 @@ void parseAndExecuteCommand(const String& payload) {
 
 void captureAndSendFrame() {
   if (WiFi.status() != WL_CONNECTED) {
-    connectWiFi();
+    if (millis() - lastWiFiReconnectAttempt > 10000) {
+      lastWiFiReconnectAttempt = millis();
+      connectWiFi();
+    }
     return;
   }
 

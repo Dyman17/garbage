@@ -385,22 +385,7 @@ with gr.Blocks(title="HerbiBioS Waste AI", theme=theme, css="footer {display: no
     )
 
 
-# ----------------- FastAPI App Initialization & CORS -----------------
-from fastapi import FastAPI
-app = FastAPI(title="HerbiBioS Cloud AI & ESP32 Server")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-# ----------------- Custom FastAPI Endpoints for ESP32-CAM -----------------
-@app.get("/health")
-@app.get("/api/health")
+# ----------------- Custom API Endpoints for ESP32-CAM & Dashboard -----------------
 def health_check():
     return {
         "status": "ok",
@@ -410,8 +395,6 @@ def health_check():
     }
 
 
-@app.get("/status")
-@app.get("/api/status")
 def get_system_status():
     now = time.time()
     esp32_online = (now - state.esp32_last_seen) < 8.0 if state.esp32_last_seen > 0 else False
@@ -429,18 +412,13 @@ def get_system_status():
     }
 
 
-@app.get("/frame.jpg")
-@app.get("/api/frame.jpg")
 def get_latest_frame():
     if state.last_annotated_jpeg is None:
         raise HTTPException(status_code=404, detail="No camera frame available yet")
     return Response(content=state.last_annotated_jpeg, media_type="image/jpeg")
 
 
-# Main frame endpoint called by ESP32-CAM (available at both /frame and /esp32_frame)
-@app.post("/frame")
-@app.post("/api/frame")
-@app.post("/esp32_frame")
+# Main frame endpoint called by ESP32-CAM (POST /frame)
 async def process_frame(
     request: Request,
     image: Optional[UploadFile] = File(None),
@@ -549,19 +527,30 @@ async def process_frame(
     }
 
 
-# Mount Gradio Blocks onto FastAPI
-app = gr.mount_gradio_app(app, demo, path="/")
-
-
-# Server Entry Point
+# Server Entry Point for Hugging Face Spaces & Local Execution
 if __name__ == "__main__":
-    try:
-        from spaces import zero as _spaces_zero
-        if hasattr(_spaces_zero, "startup"):
-            _spaces_zero.startup()
-            logger.info("ZeroGPU startup hook registered successfully.")
-    except Exception as exc:
-        logger.warning("ZeroGPU startup hook skipped: %s", exc)
+    from fastapi.routing import APIRoute
 
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=7860)
+    # Launch Gradio without blocking thread so we can prepend our routes
+    server_app, local_url, share_url = demo.launch(prevent_thread_lock=True)
+
+    # Prepend custom endpoints to the top of router routes so they take precedence over SvelteKit catch-all
+    custom_routes = [
+        APIRoute("/frame", process_frame, methods=["POST"]),
+        APIRoute("/api/frame", process_frame, methods=["POST"]),
+        APIRoute("/esp32_frame", process_frame, methods=["POST"]),
+        APIRoute("/health", health_check, methods=["GET"]),
+        APIRoute("/api/health", health_check, methods=["GET"]),
+        APIRoute("/status", get_system_status, methods=["GET"]),
+        APIRoute("/api/status", get_system_status, methods=["GET"]),
+        APIRoute("/frame.jpg", get_latest_frame, methods=["GET"]),
+        APIRoute("/api/frame.jpg", get_latest_frame, methods=["GET"]),
+    ]
+
+    for route in reversed(custom_routes):
+        server_app.router.routes.insert(0, route)
+
+    logger.info("Custom API routes successfully injected into Gradio FastAPI router.")
+
+    # Keep server running permanently
+    demo.block_thread()

@@ -4,6 +4,8 @@
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <ESP32Servo.h>
+#include "soc/soc.h"
+#include "soc/rtc_cntl_reg.h"
 
 // ================= НАСТРОЙКИ ПОДКЛЮЧЕНИЯ =================
 // 1. Укажите имя и пароль вашей Wi-Fi сети (с выходом в интернет)
@@ -250,6 +252,7 @@ void captureAndSendFrame() {
 }
 
 void setup() {
+  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); // Отключение детектора просадки (Brownout)
   Serial.begin(115200);
   delay(1000);
   Serial.println("\n====================================");

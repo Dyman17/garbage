@@ -396,6 +396,7 @@ demo.app.add_middleware(
 
 
 # ----------------- Custom FastAPI Endpoints for ESP32-CAM -----------------
+@demo.app.get("/health")
 @demo.app.get("/api/health")
 def health_check():
     return {
@@ -406,6 +407,7 @@ def health_check():
     }
 
 
+@demo.app.get("/status")
 @demo.app.get("/api/status")
 def get_system_status():
     now = time.time()
@@ -424,6 +426,7 @@ def get_system_status():
     }
 
 
+@demo.app.get("/frame.jpg")
 @demo.app.get("/api/frame.jpg")
 def get_latest_frame():
     if state.last_annotated_jpeg is None:
@@ -431,8 +434,9 @@ def get_latest_frame():
     return Response(content=state.last_annotated_jpeg, media_type="image/jpeg")
 
 
-# Main frame endpoint called by ESP32-CAM
-@demo.app.post("/api/frame")
+# Main frame endpoint called by ESP32-CAM (available at both /frame and /esp32_frame)
+@demo.app.post("/frame")
+@demo.app.post("/esp32_frame")
 async def process_frame(
     request: Request,
     image: Optional[UploadFile] = File(None),

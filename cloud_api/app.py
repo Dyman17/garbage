@@ -385,8 +385,11 @@ with gr.Blocks(title="HerbiBioS Waste AI", theme=theme, css="footer {display: no
     )
 
 
-# ----------------- Enable CORS on Gradio FastAPI app -----------------
-demo.app.add_middleware(
+# ----------------- FastAPI App Initialization & CORS -----------------
+from fastapi import FastAPI
+app = FastAPI(title="HerbiBioS Cloud AI & ESP32 Server")
+
+app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
@@ -396,8 +399,8 @@ demo.app.add_middleware(
 
 
 # ----------------- Custom FastAPI Endpoints for ESP32-CAM -----------------
-@demo.app.get("/health")
-@demo.app.get("/api/health")
+@app.get("/health")
+@app.get("/api/health")
 def health_check():
     return {
         "status": "ok",
@@ -407,8 +410,8 @@ def health_check():
     }
 
 
-@demo.app.get("/status")
-@demo.app.get("/api/status")
+@app.get("/status")
+@app.get("/api/status")
 def get_system_status():
     now = time.time()
     esp32_online = (now - state.esp32_last_seen) < 8.0 if state.esp32_last_seen > 0 else False
@@ -426,8 +429,8 @@ def get_system_status():
     }
 
 
-@demo.app.get("/frame.jpg")
-@demo.app.get("/api/frame.jpg")
+@app.get("/frame.jpg")
+@app.get("/api/frame.jpg")
 def get_latest_frame():
     if state.last_annotated_jpeg is None:
         raise HTTPException(status_code=404, detail="No camera frame available yet")
@@ -435,8 +438,9 @@ def get_latest_frame():
 
 
 # Main frame endpoint called by ESP32-CAM (available at both /frame and /esp32_frame)
-@demo.app.post("/frame")
-@demo.app.post("/esp32_frame")
+@app.post("/frame")
+@app.post("/api/frame")
+@app.post("/esp32_frame")
 async def process_frame(
     request: Request,
     image: Optional[UploadFile] = File(None),
@@ -545,6 +549,19 @@ async def process_frame(
     }
 
 
-# Launch Gradio
+# Mount Gradio Blocks onto FastAPI
+app = gr.mount_gradio_app(app, demo, path="/")
+
+
+# Server Entry Point
 if __name__ == "__main__":
-    demo.launch()
+    try:
+        from spaces import zero as _spaces_zero
+        if hasattr(_spaces_zero, "startup"):
+            _spaces_zero.startup()
+            logger.info("ZeroGPU startup hook registered successfully.")
+    except Exception as exc:
+        logger.warning("ZeroGPU startup hook skipped: %s", exc)
+
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=7860)

@@ -534,8 +534,18 @@ if __name__ == "__main__":
     # Launch Gradio without blocking thread so we can prepend our routes
     server_app, local_url, share_url = demo.launch(prevent_thread_lock=True)
 
-    # Prepend custom endpoints to the top of router routes so they take precedence over SvelteKit catch-all
+    # In Gradio 6+, Hugging Face routes backend API requests to /gradio_api/
+    # Prepend both /gradio_api/... and root /... endpoints to the FastAPI router
     custom_routes = [
+        APIRoute("/gradio_api/frame", process_frame, methods=["POST"]),
+        APIRoute("/gradio_api/api/frame", process_frame, methods=["POST"]),
+        APIRoute("/gradio_api/esp32_frame", process_frame, methods=["POST"]),
+        APIRoute("/gradio_api/health", health_check, methods=["GET"]),
+        APIRoute("/gradio_api/api/health", health_check, methods=["GET"]),
+        APIRoute("/gradio_api/status", get_system_status, methods=["GET"]),
+        APIRoute("/gradio_api/api/status", get_system_status, methods=["GET"]),
+        APIRoute("/gradio_api/frame.jpg", get_latest_frame, methods=["GET"]),
+        APIRoute("/gradio_api/api/frame.jpg", get_latest_frame, methods=["GET"]),
         APIRoute("/frame", process_frame, methods=["POST"]),
         APIRoute("/api/frame", process_frame, methods=["POST"]),
         APIRoute("/esp32_frame", process_frame, methods=["POST"]),
@@ -549,6 +559,12 @@ if __name__ == "__main__":
 
     for route in reversed(custom_routes):
         server_app.router.routes.insert(0, route)
+
+    # Rebuild Starlette middleware stack so new routes take effect immediately
+    try:
+        server_app.middleware_stack = server_app.build_middleware_stack()
+    except Exception as e:
+        logger.warning("Could not rebuild middleware stack: %s", e)
 
     logger.info("Custom API routes successfully injected into Gradio FastAPI router.")
 

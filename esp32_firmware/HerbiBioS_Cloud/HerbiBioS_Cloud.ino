@@ -12,8 +12,8 @@
 const char* WIFI_SSID = "DD";
 const char* WIFI_PASSWORD = "dddddddd";
 
-// 2. Адрес вашего сервера в облаке Hugging Face Spaces
-const char* SERVER_URL = "https://dyman17-garbage.hf.space/frame";
+// 2. Адрес вашего сервера в облаке Hugging Face Spaces (в Gradio 6 бэкенд на /gradio_api/frame)
+const char* SERVER_URL = "https://dyman17-garbage.hf.space/gradio_api/frame";
 
 // 3. Интервал между отправками кадров (в миллисекундах)
 const unsigned long CAPTURE_INTERVAL_MS = 2500; // каждые 2.5 секунды

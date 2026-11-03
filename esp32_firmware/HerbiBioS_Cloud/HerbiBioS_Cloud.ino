@@ -48,6 +48,10 @@ Servo servos[3];
 bool servoAttached[3] = {false, false, false};
 unsigned long lastCaptureTime = 0;
 
+// Конфигурация углов сервоприводов (по умолчанию: закрыто = -90°, открыто = 0°)
+int binClosedAngle[3] = {-90, -90, -90};
+int binOpenAngle[3]   = {0, 0, 0};
+
 // Переменные для неблокирующего закрытия крышки
 int activeServoIndex = -1;
 int activeServoClosedAngle = 0;
@@ -75,26 +79,51 @@ void detachServo(int index) {
   }
 }
 
+// Преобразование логического угла в физический ШИМ угол сервопривода (0°..180°).
+// Если в системе используются отрицательные углы (например -90° закрыто, 0° открыто),
+// то -90° транслируется в физический 0°, а 0° — в физический 90° (+90° сдвиг).
+int toPhysicalAngle(int index, int angle) {
+  int closedA = (index >= 0 && index < 3) ? binClosedAngle[index] : -90;
+  int openA   = (index >= 0 && index < 3) ? binOpenAngle[index] : 0;
+
+  if (closedA < 0 || openA < 0 || angle < 0) {
+    return constrain(angle + 90, 0, 180);
+  }
+  return constrain(angle, 0, 180);
+}
+
 void moveServoTo(int index, int angle) {
   if (index < 0 || index >= 3) return;
+  int physicalPWM = toPhysicalAngle(index, angle);
+  Serial.printf("[SERVO] BIN_%d: угол %d° -> ШИМ %d°\n", index + 1, angle, physicalPWM);
   attachServo(index);
-  servos[index].write(angle);
+  servos[index].write(physicalPWM);
 }
 
 void executeTimedOpen(int index, int openAngle, int closedAngle, unsigned long holdMs) {
   if (index < 0 || index >= 3) return;
-  Serial.printf("[SERVO] Открытие BIN_%d: угол %d на %lu мс (закрытие: %d)\n", index + 1, openAngle, holdMs, closedAngle);
-  moveServoTo(index, openAngle);
+  binClosedAngle[index] = closedAngle;
+  binOpenAngle[index] = openAngle;
+
+  int pOpen = toPhysicalAngle(index, openAngle);
+  int pClosed = toPhysicalAngle(index, closedAngle);
+
+  Serial.printf("[SERVO] Открытие BIN_%d: логич %d° (ШИМ %d°) на %lu мс, закрытие логич %d° (ШИМ %d°)\n",
+                index + 1, openAngle, pOpen, holdMs, closedAngle, pClosed);
+  attachServo(index);
+  servos[index].write(pOpen);
+
   activeServoIndex = index;
-  activeServoClosedAngle = closedAngle;
+  activeServoClosedAngle = pClosed;
   servoCloseTimestamp = millis() + holdMs;
 }
 
 void checkServoAutoClose() {
   if (activeServoIndex >= 0 && millis() >= servoCloseTimestamp) {
-    Serial.printf("[SERVO] Закрытие BIN_%d: угол %d\n", activeServoIndex + 1, activeServoClosedAngle);
-    moveServoTo(activeServoIndex, activeServoClosedAngle);
-    delay(300); // даем сервоприводу завершить поворот
+    Serial.printf("[SERVO] Закрытие BIN_%d: возврат в ШИМ %d°\n", activeServoIndex + 1, activeServoClosedAngle);
+    attachServo(activeServoIndex);
+    servos[activeServoIndex].write(activeServoClosedAngle);
+    delay(350); // даем сервоприводу завершить поворот
     detachServo(activeServoIndex); // отключаем ШИМ, чтобы сервопривод не гудел
     activeServoIndex = -1;
   }
@@ -280,6 +309,15 @@ void setup() {
   Serial.println("====================================");
 
   setupServos();
+  // Устанавливаем сервоприводы в исходное закрытое положение при старте
+  for (int i = 0; i < 3; i++) {
+    int initClosedPWM = toPhysicalAngle(i, binClosedAngle[i]);
+    attachServo(i);
+    servos[i].write(initClosedPWM);
+    delay(150);
+    detachServo(i);
+  }
+
   if (!initCamera()) {
     Serial.println("[FATAL] Не удалось запустить камеру!");
   }

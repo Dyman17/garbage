@@ -45,9 +45,9 @@ logger = logging.getLogger("herbibios.cloud_api")
 
 # ----------------- Configuration & State -----------------
 DEFAULT_SETTINGS: Dict[str, Any] = {
-    "BIN_1": {"closed": 0, "open": 90},
-    "BIN_2": {"closed": 0, "open": 90},
-    "BIN_3": {"closed": 0, "open": 90},
+    "BIN_1": {"closed": -90, "open": 0},
+    "BIN_2": {"closed": -90, "open": 0},
+    "BIN_3": {"closed": -90, "open": 0},
     "hold_time_ms": 3000,
     "confidence_threshold": 0.55,
 }
@@ -187,27 +187,34 @@ with gr.Blocks(title="HerbiBioS Waste AI", theme=theme, css="footer {display: no
                 btn_open_b2 = gr.Button("🥫 Открыть БАК 2", variant="secondary")
                 btn_open_b3 = gr.Button("📦 Открыть БАК 3", variant="secondary")
 
-            gr.Markdown("### 🔧 Калибровка углов сервоприводов (0°–180°)")
+            gr.Markdown("### 🔧 Калибровка углов сервоприводов (-180° ... +180°)")
+            gr.Markdown("💡 *Рекомендуемые углы для створок:* **Закрыто: -90°**, **Открыто: 0°** (или от 0° до 180° под любую ориентацию тяг).")
             with gr.Group():
                 gr.Markdown("**БАК 1 (Пластик — GPIO 12)**")
                 with gr.Row():
-                    s_b1_closed = gr.Slider(0, 180, value=state.settings["BIN_1"]["closed"], step=1, label="Закрыто (°)")
-                    s_b1_open = gr.Slider(0, 180, value=state.settings["BIN_1"]["open"], step=1, label="Открыто (°)")
-                    btn_test_b1 = gr.Button("Тест угла", size="sm")
+                    s_b1_closed = gr.Slider(-180, 180, value=state.settings["BIN_1"]["closed"], step=1, label="Закрыто (°)")
+                    s_b1_open = gr.Slider(-180, 180, value=state.settings["BIN_1"]["open"], step=1, label="Открыто (°)")
+                with gr.Row():
+                    btn_test_b1_c = gr.Button("Тест: Закрыто", size="sm")
+                    btn_test_b1_o = gr.Button("Тест: Открыто", size="sm", variant="secondary")
 
             with gr.Group():
                 gr.Markdown("**БАК 2 (Металл — GPIO 13)**")
                 with gr.Row():
-                    s_b2_closed = gr.Slider(0, 180, value=state.settings["BIN_2"]["closed"], step=1, label="Закрыто (°)")
-                    s_b2_open = gr.Slider(0, 180, value=state.settings["BIN_2"]["open"], step=1, label="Открыто (°)")
-                    btn_test_b2 = gr.Button("Тест угла", size="sm")
+                    s_b2_closed = gr.Slider(-180, 180, value=state.settings["BIN_2"]["closed"], step=1, label="Закрыто (°)")
+                    s_b2_open = gr.Slider(-180, 180, value=state.settings["BIN_2"]["open"], step=1, label="Открыто (°)")
+                with gr.Row():
+                    btn_test_b2_c = gr.Button("Тест: Закрыто", size="sm")
+                    btn_test_b2_o = gr.Button("Тест: Открыто", size="sm", variant="secondary")
 
             with gr.Group():
                 gr.Markdown("**БАК 3 (Бумага — GPIO 14)**")
                 with gr.Row():
-                    s_b3_closed = gr.Slider(0, 180, value=state.settings["BIN_3"]["closed"], step=1, label="Закрыто (°)")
-                    s_b3_open = gr.Slider(0, 180, value=state.settings["BIN_3"]["open"], step=1, label="Открыто (°)")
-                    btn_test_b3 = gr.Button("Тест угла", size="sm")
+                    s_b3_closed = gr.Slider(-180, 180, value=state.settings["BIN_3"]["closed"], step=1, label="Закрыто (°)")
+                    s_b3_open = gr.Slider(-180, 180, value=state.settings["BIN_3"]["open"], step=1, label="Открыто (°)")
+                with gr.Row():
+                    btn_test_b3_c = gr.Button("Тест: Закрыто", size="sm")
+                    btn_test_b3_o = gr.Button("Тест: Открыто", size="sm", variant="secondary")
 
             s_hold_time = gr.Slider(1000, 8000, value=state.settings.get("hold_time_ms", 3000), step=500, label="Время открытия створки (мс)")
             btn_save = gr.Button("💾 Сохранить настройки углов в Облако", variant="primary", size="lg")
@@ -235,7 +242,7 @@ with gr.Blocks(title="HerbiBioS Waste AI", theme=theme, css="footer {display: no
 
     # ----------------- UI Python Handlers -----------------
     def on_click_open(bin_name: str):
-        cfg = state.settings.get(bin_name, {"closed": 0, "open": 90})
+        cfg = state.settings.get(bin_name, {"closed": -90, "open": 0})
         state.pending_manual_command = {
             "type": "timed_open",
             "bin": bin_name,
@@ -244,7 +251,7 @@ with gr.Blocks(title="HerbiBioS Waste AI", theme=theme, css="footer {display: no
             "hold_ms": state.settings.get("hold_time_ms", 3000),
         }
         logger.info("Manual open triggered for %s", bin_name)
-        gr.Info(f"Команда: открыть {bin_name} на 3 сек отправлена в очередь!")
+        gr.Info(f"Команда: открыть {bin_name} на {round(state.settings.get('hold_time_ms', 3000)/1000, 1)} сек отправлена в очередь!")
 
     btn_open_b1.click(fn=lambda: on_click_open("BIN_1"))
     btn_open_b2.click(fn=lambda: on_click_open("BIN_2"))
@@ -256,11 +263,14 @@ with gr.Blocks(title="HerbiBioS Waste AI", theme=theme, css="footer {display: no
             "bin": bin_name,
             "angle": int(target_angle),
         }
-        gr.Info(f"Тест {bin_name}: угол {target_angle}° отправлен!")
+        gr.Info(f"Тест {bin_name}: угол {target_angle}° отправлен на ESP32!")
 
-    btn_test_b1.click(fn=lambda a: on_test_angle("BIN_1", a), inputs=[s_b1_open])
-    btn_test_b2.click(fn=lambda a: on_test_angle("BIN_2", a), inputs=[s_b2_open])
-    btn_test_b3.click(fn=lambda a: on_test_angle("BIN_3", a), inputs=[s_b3_open])
+    btn_test_b1_c.click(fn=lambda a: on_test_angle("BIN_1", a), inputs=[s_b1_closed])
+    btn_test_b1_o.click(fn=lambda a: on_test_angle("BIN_1", a), inputs=[s_b1_open])
+    btn_test_b2_c.click(fn=lambda a: on_test_angle("BIN_2", a), inputs=[s_b2_closed])
+    btn_test_b2_o.click(fn=lambda a: on_test_angle("BIN_2", a), inputs=[s_b2_open])
+    btn_test_b3_c.click(fn=lambda a: on_test_angle("BIN_3", a), inputs=[s_b3_closed])
+    btn_test_b3_o.click(fn=lambda a: on_test_angle("BIN_3", a), inputs=[s_b3_open])
 
     def on_save_settings(b1_c, b1_o, b2_c, b2_o, b3_c, b3_o, hold):
         state.settings["BIN_1"] = {"closed": int(b1_c), "open": int(b1_o)}
@@ -506,7 +516,7 @@ async def process_frame(
             state.stats[target_bin] = state.stats.get(target_bin, 0) + 1
             state.stats["total"] += 1
 
-            bin_cfg = state.settings.get(target_bin, {"closed": 0, "open": 90})
+            bin_cfg = state.settings.get(target_bin, {"closed": -90, "open": 0})
             auto_command = {
                 "type": "timed_open",
                 "bin": target_bin,

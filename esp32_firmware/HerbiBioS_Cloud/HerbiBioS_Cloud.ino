@@ -48,9 +48,9 @@ Servo servos[3];
 bool servoAttached[3] = {false, false, false};
 unsigned long lastCaptureTime = 0;
 
-// Конфигурация углов сервоприводов (по умолчанию: закрыто = -90°, открыто = 0°)
+// Конфигурация углов сервоприводов (по умолчанию: закрыто = -90°, открыто = 45°)
 int binClosedAngle[3] = {-90, -90, -90};
-int binOpenAngle[3]   = {0, 0, 0};
+int binOpenAngle[3]   = {45, 45, 45};
 
 // Переменные для неблокирующего закрытия крышки
 int activeServoIndex = -1;
@@ -235,8 +235,8 @@ void parseAndExecuteCommand(const String& payload) {
 
   // Если это открытие крышки на время (автоматическое или ручное)
   if (payload.indexOf("timed_open") != -1) {
-    int openAngle = 90;
-    int closedAngle = 0;
+    int openAngle = 45;
+    int closedAngle = -90;
     unsigned long holdMs = 3000;
 
     int openPos = payload.indexOf("\"open_angle\":");

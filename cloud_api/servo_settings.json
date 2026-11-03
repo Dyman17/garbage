@@ -1,15 +1,15 @@
 {
   "BIN_1": {
     "closed": -90,
-    "open": 0
+    "open": 45
   },
   "BIN_2": {
     "closed": -90,
-    "open": 0
+    "open": 45
   },
   "BIN_3": {
     "closed": -90,
-    "open": 0
+    "open": 45
   },
   "hold_time_ms": 3000,
   "confidence_threshold": 0.55

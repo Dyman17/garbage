@@ -45,9 +45,9 @@ logger = logging.getLogger("herbibios.cloud_api")
 
 # ----------------- Configuration & State -----------------
 DEFAULT_SETTINGS: Dict[str, Any] = {
-    "BIN_1": {"closed": -90, "open": 0},
-    "BIN_2": {"closed": -90, "open": 0},
-    "BIN_3": {"closed": -90, "open": 0},
+    "BIN_1": {"closed": -90, "open": 45},
+    "BIN_2": {"closed": -90, "open": 45},
+    "BIN_3": {"closed": -90, "open": 45},
     "hold_time_ms": 3000,
     "confidence_threshold": 0.55,
 }
@@ -188,7 +188,7 @@ with gr.Blocks(title="HerbiBioS Waste AI", theme=theme, css="footer {display: no
                 btn_open_b3 = gr.Button("📦 Открыть БАК 3", variant="secondary")
 
             gr.Markdown("### 🔧 Калибровка углов сервоприводов (-180° ... +180°)")
-            gr.Markdown("💡 *Рекомендуемые углы для створок:* **Закрыто: -90°**, **Открыто: 0°** (или от 0° до 180° под любую ориентацию тяг).")
+            gr.Markdown("💡 *Рекомендуемые углы для створок:* **Закрыто: -90°**, **Открыто: 45°** (или любые углы под вашу тягу).")
             with gr.Group():
                 gr.Markdown("**БАК 1 (Пластик — GPIO 12)**")
                 with gr.Row():
@@ -242,7 +242,7 @@ with gr.Blocks(title="HerbiBioS Waste AI", theme=theme, css="footer {display: no
 
     # ----------------- UI Python Handlers -----------------
     def on_click_open(bin_name: str):
-        cfg = state.settings.get(bin_name, {"closed": -90, "open": 0})
+        cfg = state.settings.get(bin_name, {"closed": -90, "open": 45})
         state.pending_manual_command = {
             "type": "timed_open",
             "bin": bin_name,
@@ -516,7 +516,7 @@ async def process_frame(
             state.stats[target_bin] = state.stats.get(target_bin, 0) + 1
             state.stats["total"] += 1
 
-            bin_cfg = state.settings.get(target_bin, {"closed": -90, "open": 0})
+            bin_cfg = state.settings.get(target_bin, {"closed": -90, "open": 45})
             auto_command = {
                 "type": "timed_open",
                 "bin": target_bin,

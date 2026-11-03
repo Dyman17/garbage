@@ -418,12 +418,25 @@ def get_latest_frame():
     return Response(content=state.last_annotated_jpeg, media_type="image/jpeg")
 
 
-# Main frame endpoint called by ESP32-CAM (POST /frame)
+# Main frame endpoint called by ESP32-CAM (POST /frame, and GET for browser verification)
 async def process_frame(
     request: Request,
     image: Optional[UploadFile] = File(None),
 ):
     now = time.time()
+
+    # If opened in a web browser via GET, return friendly status check
+    if request.method == "GET":
+        esp_online = (now - state.esp32_last_seen < 8.0) if state.esp32_last_seen > 0 else False
+        return {
+            "status": "online",
+            "endpoint": "/gradio_api/frame",
+            "message": "HerbiBioS ESP32-CAM cloud ingestion endpoint is online. Send HTTP POST with JPEG image bytes to submit frames.",
+            "uptime_seconds": int(now - state.start_time),
+            "esp32_camera": "connected" if esp_online else "waiting_for_esp32",
+            "models_ready": state.detector is not None,
+        }
+
     state.esp32_last_seen = now
 
     # 1. Check if there is an urgent pending manual command from the website
@@ -537,18 +550,18 @@ if __name__ == "__main__":
     # In Gradio 6+, Hugging Face routes backend API requests to /gradio_api/
     # Prepend both /gradio_api/... and root /... endpoints to the FastAPI router
     custom_routes = [
-        APIRoute("/gradio_api/frame", process_frame, methods=["POST"]),
-        APIRoute("/gradio_api/api/frame", process_frame, methods=["POST"]),
-        APIRoute("/gradio_api/esp32_frame", process_frame, methods=["POST"]),
+        APIRoute("/gradio_api/frame", process_frame, methods=["POST", "GET"]),
+        APIRoute("/gradio_api/api/frame", process_frame, methods=["POST", "GET"]),
+        APIRoute("/gradio_api/esp32_frame", process_frame, methods=["POST", "GET"]),
         APIRoute("/gradio_api/health", health_check, methods=["GET"]),
         APIRoute("/gradio_api/api/health", health_check, methods=["GET"]),
         APIRoute("/gradio_api/status", get_system_status, methods=["GET"]),
         APIRoute("/gradio_api/api/status", get_system_status, methods=["GET"]),
         APIRoute("/gradio_api/frame.jpg", get_latest_frame, methods=["GET"]),
         APIRoute("/gradio_api/api/frame.jpg", get_latest_frame, methods=["GET"]),
-        APIRoute("/frame", process_frame, methods=["POST"]),
-        APIRoute("/api/frame", process_frame, methods=["POST"]),
-        APIRoute("/esp32_frame", process_frame, methods=["POST"]),
+        APIRoute("/frame", process_frame, methods=["POST", "GET"]),
+        APIRoute("/api/frame", process_frame, methods=["POST", "GET"]),
+        APIRoute("/esp32_frame", process_frame, methods=["POST", "GET"]),
         APIRoute("/health", health_check, methods=["GET"]),
         APIRoute("/api/health", health_check, methods=["GET"]),
         APIRoute("/status", get_system_status, methods=["GET"]),

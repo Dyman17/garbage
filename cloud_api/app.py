@@ -208,7 +208,7 @@ with gr.Blocks(title="HerbiBioS Waste AI", theme=theme, css="footer {display: no
                     btn_test_b2_o = gr.Button("Тест: Открыто", size="sm", variant="secondary")
 
             with gr.Group():
-                gr.Markdown("**БАК 3 (Бумага — GPIO 14)**")
+                gr.Markdown("**БАК 3 (Бумага — GPIO 15)**")
                 with gr.Row():
                     s_b3_closed = gr.Slider(-180, 180, value=state.settings["BIN_3"]["closed"], step=1, label="Закрыто (°)")
                     s_b3_open = gr.Slider(-180, 180, value=state.settings["BIN_3"]["open"], step=1, label="Открыто (°)")

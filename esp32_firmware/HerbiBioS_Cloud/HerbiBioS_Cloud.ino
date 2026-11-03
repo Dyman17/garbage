@@ -20,8 +20,8 @@ const unsigned long CAPTURE_INTERVAL_MS = 2500; // каждые 2.5 секунд
 // =========================================================
 
 // ================= НАЗНАЧЕНИЕ ПИНОВ ======================
-// Пины сервоприводов (BIN_1 -> GPIO12, BIN_2 -> GPIO13, BIN_3 -> GPIO14)
-constexpr int SERVO_PINS[] = {12, 13, 14};
+// Пины сервоприводов (BIN_1 -> GPIO12, BIN_2 -> GPIO13, BIN_3 -> GPIO15)
+constexpr int SERVO_PINS[] = {12, 13, 15};
 constexpr int SERVO_MIN_PULSE_US = 500;
 constexpr int SERVO_MAX_PULSE_US = 2400;
 

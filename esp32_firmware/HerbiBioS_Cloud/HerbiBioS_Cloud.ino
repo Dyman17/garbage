@@ -123,7 +123,7 @@ void checkServoAutoClose() {
     Serial.printf("[SERVO] Закрытие BIN_%d: возврат в ШИМ %d°\n", activeServoIndex + 1, activeServoClosedAngle);
     attachServo(activeServoIndex);
     servos[activeServoIndex].write(activeServoClosedAngle);
-    delay(350); // даем сервоприводу завершить поворот
+    delay(800); // 800 мс — даем сервоприводу плотно дожать крышку до упора
     detachServo(activeServoIndex); // отключаем ШИМ, чтобы сервопривод не гудел
     activeServoIndex = -1;
   }
@@ -314,7 +314,7 @@ void setup() {
     int initClosedPWM = toPhysicalAngle(i, binClosedAngle[i]);
     attachServo(i);
     servos[i].write(initClosedPWM);
-    delay(150);
+    delay(300);
     detachServo(i);
   }
 

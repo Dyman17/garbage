@@ -8,14 +8,21 @@ BIN_3 = "BIN_3"
 UNKNOWN = "UNKNOWN"
 
 DEFAULT_MAPPING: Dict[str, str] = {
-    "plastic bottle": BIN_3,
-    "plastic bag": BIN_3,
-    "drink carton": BIN_3,
-    "plastic bottle cap": BIN_3,
-    "can": BIN_2,
-    "pop tab": BIN_2,
-    "cardboard": BIN_1,
+    # БАК 1 — Бумага / Картон (GPIO 12)
     "paper": BIN_1,
+    "cardboard": BIN_1,
+
+    # БАК 2 — Пластик / Тетрапак (GPIO 13)
+    "plastic bottle": BIN_2,
+    "plastic bag": BIN_2,
+    "drink carton": BIN_2,
+    "plastic bottle cap": BIN_2,
+
+    # БАК 3 — Металл / Банки (GPIO 15)
+    "can": BIN_3,
+    "pop tab": BIN_3,
+
+    # Без бака (створки закрыты)
     "battery": UNKNOWN,
     "glass bottle": UNKNOWN,
 }

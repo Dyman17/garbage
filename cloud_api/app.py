@@ -175,22 +175,22 @@ with gr.Blocks(title="HerbiBioS Waste AI", theme=theme, css="footer {display: no
                 interactive=False,
             )
             with gr.Row():
-                stat_bin1 = gr.Number(value=0, label="🥤 БАК 1 (Пластик)", interactive=False)
-                stat_bin2 = gr.Number(value=0, label="🥫 БАК 2 (Металл)", interactive=False)
-                stat_bin3 = gr.Number(value=0, label="📦 БАК 3 (Бумага)", interactive=False)
+                stat_bin1 = gr.Number(value=0, label="📦 БАК 1 (Бумага)", interactive=False)
+                stat_bin2 = gr.Number(value=0, label="🥤 БАК 2 (Пластик)", interactive=False)
+                stat_bin3 = gr.Number(value=0, label="🥫 БАК 3 (Металл)", interactive=False)
 
         # RIGHT COLUMN: Servo Controls & Calibration
         with gr.Column(scale=5):
             gr.Markdown("### ⚡ Быстрое открытие створок (на 3 сек)")
             with gr.Row():
-                btn_open_b1 = gr.Button("🥤 Открыть БАК 1", variant="primary")
-                btn_open_b2 = gr.Button("🥫 Открыть БАК 2", variant="secondary")
-                btn_open_b3 = gr.Button("📦 Открыть БАК 3", variant="secondary")
+                btn_open_b1 = gr.Button("📦 Открыть БАК 1", variant="primary")
+                btn_open_b2 = gr.Button("🥤 Открыть БАК 2", variant="secondary")
+                btn_open_b3 = gr.Button("🥫 Открыть БАК 3", variant="secondary")
 
             gr.Markdown("### 🔧 Калибровка углов сервоприводов (-180° ... +180°)")
             gr.Markdown("💡 *Рекомендуемые углы для створок:* **Закрыто: -90°**, **Открыто: 45°** (или любые углы под вашу тягу).")
             with gr.Group():
-                gr.Markdown("**БАК 1 (Пластик — GPIO 12)**")
+                gr.Markdown("**БАК 1 (Бумага / Картон — GPIO 12)**")
                 with gr.Row():
                     s_b1_closed = gr.Slider(-180, 180, value=state.settings["BIN_1"]["closed"], step=1, label="Закрыто (°)")
                     s_b1_open = gr.Slider(-180, 180, value=state.settings["BIN_1"]["open"], step=1, label="Открыто (°)")
@@ -199,7 +199,7 @@ with gr.Blocks(title="HerbiBioS Waste AI", theme=theme, css="footer {display: no
                     btn_test_b1_o = gr.Button("Тест: Открыто", size="sm", variant="secondary")
 
             with gr.Group():
-                gr.Markdown("**БАК 2 (Металл — GPIO 13)**")
+                gr.Markdown("**БАК 2 (Пластик / Тетрапак — GPIO 13)**")
                 with gr.Row():
                     s_b2_closed = gr.Slider(-180, 180, value=state.settings["BIN_2"]["closed"], step=1, label="Закрыто (°)")
                     s_b2_open = gr.Slider(-180, 180, value=state.settings["BIN_2"]["open"], step=1, label="Открыто (°)")
@@ -208,7 +208,7 @@ with gr.Blocks(title="HerbiBioS Waste AI", theme=theme, css="footer {display: no
                     btn_test_b2_o = gr.Button("Тест: Открыто", size="sm", variant="secondary")
 
             with gr.Group():
-                gr.Markdown("**БАК 3 (Бумага — GPIO 15)**")
+                gr.Markdown("**БАК 3 (Металл / Банки — GPIO 15)**")
                 with gr.Row():
                     s_b3_closed = gr.Slider(-180, 180, value=state.settings["BIN_3"]["closed"], step=1, label="Закрыто (°)")
                     s_b3_open = gr.Slider(-180, 180, value=state.settings["BIN_3"]["open"], step=1, label="Открыто (°)")
@@ -335,9 +335,9 @@ with gr.Blocks(title="HerbiBioS Waste AI", theme=theme, css="footer {display: no
             best = max(waste_items, key=lambda item: item.confidence)
             target_bin = resolve_bin(best.class_name)
             bin_desc = {
-                "BIN_1": "🥤 БАК 1 (Пластик / Тетрапак)",
-                "BIN_2": "🥫 БАК 2 (Металл / Алюминиевые банки)",
-                "BIN_3": "📦 БАК 3 (Бумага / Картон)",
+                "BIN_1": "📦 БАК 1 (Бумага / Картон)",
+                "BIN_2": "🥤 БАК 2 (Пластик / Тетрапак)",
+                "BIN_3": "🥫 БАК 3 (Металл / Алюминиевые банки)",
             }.get(target_bin, "❓ UNKNOWN (Не сортируемый объект)")
 
             lines.append(f"- 🎯 **Главный объект:** `{best.class_name}` (уверенность: **{round(best.confidence*100, 1)}%**)")
